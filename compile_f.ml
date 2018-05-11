@@ -80,6 +80,7 @@ let rec listUnion l1 l2 =
     else x::listUnion xs l2
 ;;
 
+
 let rec availableStates ts =
   match ts with
   | [] -> ["end"]
@@ -95,13 +96,14 @@ let add_avs s =
   avs := s::!avs
 ;;
 
+
 let rec duplicateTrans t =
   match t with
   | [] -> []
   | x::xs ->
     let sl = (findPairs xs) in
-    if belongs (x.init, x.trans) sl then let err = "Found duplicate method or label: "^x.trans in failwith err
-    else x::(duplicateTrans xs)
+      if belongs (x.init, x.trans) sl then let err = "Found duplicate method or label: "^x.trans in failwith err
+      else x::(duplicateTrans xs)
 and findPairs l =
   match l with
   | [] -> []
@@ -145,12 +147,13 @@ and compileMethod name m =
   | NextState "end" -> DOA { states = [name; "end"]; choices = []; methods = [m.op]; labels = []; start = name;
                              final = ["end"]; mTransitions = [{ init = name; trans = m.op; fin = "end" }]; lTransitions = [] }
   | NextState next -> if (belongs next !avs) then
-      DOA { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name;
-            final = []; mTransitions = [{ init = name; trans = m.op; fin = next }]; lTransitions = [] }
-    else let err = "Undefined state: "^next in failwith err
+                        DOA { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name;
+                              final = []; mTransitions = [{ init = name; trans = m.op; fin = next }]; lTransitions = [] }
+                      else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = "inner"^string_of_int (next_val i) in
-    (add_avs next; let trans = { op = m.op; result = NextState next } and nextState = { name = next; transitions = inner } in
-     union (compileStateDef nextState) (compileMethod name trans) )
+                          (add_avs next; let trans = { op = m.op; result = NextState next } and 
+                             nextState = { name = next; transitions = inner } in
+                                union (compileStateDef nextState) (compileMethod name trans) )
   | Option opt -> compileOptions name m.op opt
 
 
@@ -158,9 +161,9 @@ and compileOptions name met options =
   match options with
   | [] -> invalid_arg "There must be at least an option"
   | o::tl -> let choice = "choice"^string_of_int (next_val c) in
-    let a = DOA { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
-                  final = []; mTransitions = [{ init = name; trans = met; fin = choice }]; lTransitions = [] } in
-    union (compileLabelOptions choice o tl) a
+              let a = DOA { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
+                            final = []; mTransitions = [{ init = name; trans = met; fin = choice }]; lTransitions = [] } in
+                union (compileLabelOptions choice o tl) a
 
 
 and compileLabelOptions name first next =
@@ -176,13 +179,13 @@ and compileLabel name opt =
   | NextState "end" -> DOA { states = ["end"]; choices = [name]; methods = []; labels = [l]; start = "";
                              final = ["end"]; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = "end" }] }
   | NextState next -> if (belongs next !avs) then
-      DOA { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
-            final = []; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = next }] }
-    else let err = "Undefined state: "^next in failwith err
+                        DOA { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
+                              final = []; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = next }] }
+                      else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = "inner"^string_of_int (next_val i) in
-    (add_avs next; let nextState = { name = next; transitions = inner } and
-       option = { label = l; state = NextState next } in
-     union (compileStateDef nextState) (compileLabel name option) )
+                          (add_avs next; let nextState = { name = next; transitions = inner } and
+                            option = { label = l; state = NextState next } in
+                              union (compileStateDef nextState) (compileLabel name option) )
   | Option _ -> failwith "Internal choice states must always transition to external choice states."
 ;;
 
