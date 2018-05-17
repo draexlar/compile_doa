@@ -1,0 +1,4 @@
+* text=auto
+*.java eol=lf
+*.protocol eol=lf
+*.txt eol=lf
