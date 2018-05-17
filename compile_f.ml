@@ -205,21 +205,21 @@ let rec reduce fn x list =
 let u name = if name = "end" then name else if String.contains name ':' then String.map (fun c -> if c = ':' then '_' else c) name else "n_"^name;;
 
 let choiceToString doa choice = "<" ^ (reduce (fun { init; trans; fin } str -> (
-																		if (u init) = (u choice) then trans ^ ": " ^ (u fin) ^ (if str = "" then "" else "," ^ str) else str
-																	)) "" doa.lTransitions) ^ ">";;
+                                	if (u init) = (u choice) then trans ^ ": " ^ (u fin) ^ (if str = "" then "" else "," ^ str) else str
+                                )) "" doa.lTransitions) ^ ">";;
 
 let transToString doa _to = if belongs _to doa.choices then choiceToString doa _to else u _to;;
 
 let stateToString doa state = "{\n" ^ (reduce (fun { init; trans; fin } str -> (
-																		if (u init) = (u state) then trans ^ ": " ^ (transToString doa fin) ^ (if str = "" then "\n" else ",\n" ^ str) else str
-																)) "" doa.mTransitions) ^ "}";;
+                                	if (u init) = (u state) then trans ^ ": " ^ (transToString doa fin) ^ (if str = "" then "\n" else ",\n" ^ str) else str
+                                )) "" doa.mTransitions) ^ "}";;
 
 let doaToString doa name = "typestate " ^ name ^ " {\n" ^ (reduce (fun state str -> (
-																if state = "end" then str else (u state) ^ "=" ^ (stateToString doa state) ^ "\n" ^ str
-															)) "" doa.states) ^ "}\n";;
+                           		if state = "end" then str else (u state) ^ "=" ^ (stateToString doa state) ^ "\n" ^ str
+                           	)) "" doa.states) ^ "}\n";;
 
 let typestate = match doa with
-  | Nil -> ""
-  | DOA(doa) -> doaToString doa "NAME";;
+	| Nil -> ""
+	| DOA(doa) -> doaToString doa "NAME";;
 
 print_string typestate;;
