@@ -1,0 +1,9 @@
+bin/
+_build/
+*.class
+*.jar
+*.zip
+.paths
+.settings
+.project
+.projectSettings

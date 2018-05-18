@@ -46,6 +46,9 @@ let next_val p =
   !p
 ;;
 
+let next_choice () = "choice:"^string_of_int (next_val c);;
+let next_inner () = "inner:"^string_of_int (next_val i);;
+
 
 let ts = [
   { name = "Init"; transitions =
@@ -150,7 +153,7 @@ and compileMethod name m =
                         DOA { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name;
                               final = []; mTransitions = [{ init = name; trans = m.op; fin = next }]; lTransitions = [] }
                       else let err = "Undefined state: "^next in failwith err
-  | InnerState inner -> let next = "inner"^string_of_int (next_val i) in
+  | InnerState inner -> let next = next_inner() in
                           (add_avs next; let trans = { op = m.op; result = NextState next } and 
                              nextState = { name = next; transitions = inner } in
                                 union (compileStateDef nextState) (compileMethod name trans) )
@@ -160,7 +163,7 @@ and compileMethod name m =
 and compileOptions name met options =
   match options with
   | [] -> invalid_arg "There must be at least an option"
-  | o::tl -> let choice = "choice"^string_of_int (next_val c) in
+  | o::tl -> let choice = next_choice() in
               let a = DOA { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
                             final = []; mTransitions = [{ init = name; trans = met; fin = choice }]; lTransitions = [] } in
                 union (compileLabelOptions choice o tl) a
@@ -182,7 +185,7 @@ and compileLabel name opt =
                         DOA { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
                               final = []; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = next }] }
                       else let err = "Undefined state: "^next in failwith err
-  | InnerState inner -> let next = "inner"^string_of_int (next_val i) in
+  | InnerState inner -> let next = next_inner() in
                           (add_avs next; let nextState = { name = next; transitions = inner } and
                             option = { label = l; state = NextState next } in
                               union (compileStateDef nextState) (compileLabel name option) )
@@ -190,4 +193,33 @@ and compileLabel name opt =
 ;;
 
 availableStates ts;;
-compileTypestate ts;;
+let doa = compileTypestate ts;;
+
+(* DOA -> Typestate *)
+
+let rec reduce fn x list =
+  match list with
+  | [] -> x
+  | v::rest -> fn v (reduce fn x rest);;
+
+let u name = if name = "end" then name else if String.contains name ':' then String.map (fun c -> if c = ':' then '_' else c) name else "n_"^name;;
+
+let choiceToString doa choice = "<" ^ (reduce (fun { init; trans; fin } str -> (
+                                	if (u init) = (u choice) then trans ^ ": " ^ (u fin) ^ (if str = "" then "" else "," ^ str) else str
+                                )) "" doa.lTransitions) ^ ">";;
+
+let transToString doa _to = if belongs _to doa.choices then choiceToString doa _to else u _to;;
+
+let stateToString doa state = "{\n" ^ (reduce (fun { init; trans; fin } str -> (
+                                	if (u init) = (u state) then trans ^ ": " ^ (transToString doa fin) ^ (if str = "" then "\n" else ",\n" ^ str) else str
+                                )) "" doa.mTransitions) ^ "}";;
+
+let doaToString doa name = "typestate " ^ name ^ " {\n" ^ (reduce (fun state str -> (
+                           		if state = "end" then str else (u state) ^ "=" ^ (stateToString doa state) ^ "\n" ^ str
+                           	)) "" doa.states) ^ "}\n";;
+
+let typestate = match doa with
+	| Nil -> ""
+	| DOA(doa) -> doaToString doa "NAME";;
+
+print_string typestate;;
