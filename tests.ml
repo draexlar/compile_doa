@@ -1,16 +1,16 @@
 let ts = [
 	{ name = "Init"; transitions = 
-		[ { op = "open"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ] 
+		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ] 
 	};
 	{ name = "Open"; transitions = 
-		[ { op = "hasNext"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] }; 
-			{ op = "close"; result = NextState "end" } ] 
+		[ { op = "Boolean hasNext()"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] }; 
+			{ op = "void close()"; result = NextState "end" } ] 
 	};
 	{ name = "Read"; transitions = 
-		[ { op = "read"; result = NextState "Open" } ] 
+		[ { op = "void read()"; result = NextState "Open" } ] 
 	};
 	{ name = "Close"; transitions = 
-		[ { op = "close"; result = NextState "end" } ] 
+		[ { op = "void close()"; result = NextState "end" } ] 
 	};
 ];;
 
@@ -20,19 +20,19 @@ let ts = [
 (* Mungo/examples/collection/CollectionProtocol.protocol *)
 let ts = [
 	{ name = "Init"; transitions = 
-		[ { op = "initialise"; result = NextState "Empty" } ] 
+		[ { op = "void initialise(int)"; result = NextState "Empty" } ] 
 	};
 	{ name = "Empty"; transitions = 
-		[ { op = "put"; result = NextState "NonEmpty" }; 
-			{ op = "close"; result = NextState "end" } ] 
+		[ { op = "void put(Node)"; result = NextState "NonEmpty" }; 
+			{ op = "void put(Node)"; result = NextState "end" } ] 
 	};
 	{ name = "NonEmpty"; transitions = 
-		[ { op = "put"; result = NextState "NonEmpty" }; 
-			{ op = "get"; result = NextState "Unknown" } ] 
+		[ { op = "void put(Node)"; result = NextState "NonEmpty" }; 
+			{ op = "Node get()"; result = NextState "Unknown" } ] 
 	};
 	{ name = "Unknown"; transitions = 
-		[ { op = "put"; result = NextState "NonEmpty" }; 
-			{ op = "isEmpty"; result = Option [{ label = "TRUE"; state = NextState "Empty" }; { label = "FLASE"; state = NextState "NonEmpty" }] } ] 
+		[ { op = "void put(Node)"; result = NextState "NonEmpty" }; 
+			{ op = "BooleanChoice isEmpty()"; result = Option [{ label = "TRUE"; state = NextState "Empty" }; { label = "FLASE"; state = NextState "NonEmpty" }] } ] 
 	};
 ];;
 
@@ -249,6 +249,6 @@ let ts = [
 (* "Found duplicate method or label: OK" *)
 let ts = [
 	{ name = "Init"; transitions = 
-		[ { op = "open"; result = Option [{ label = "OK"; state = NextState "end" }; { label = "OK"; state = NextState "end" }; { label = "ERROR"; state = NextState "end" }] } ] 
+		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "end" }; { label = "OK"; state = NextState "end" }; { label = "ERROR"; state = NextState "end" }] } ] 
 	};
 ];;
