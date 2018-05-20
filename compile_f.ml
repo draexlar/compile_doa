@@ -51,19 +51,19 @@ let next_inner () = "inner:"^string_of_int (next_val i);;
 
 
 let ts = [
-  { name = "Init"; transitions =
-                     [ { op = "open"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ]
-  };
-  { name = "Open"; transitions =
-                     [ { op = "hasNext"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] };
-                       { op = "close"; result = NextState "end" } ]
-  };
-  { name = "Read"; transitions =
-                     [ { op = "read"; result = NextState "Open" } ]
-  };
-  { name = "Close"; transitions =
-                      [ { op = "close"; result = NextState "end" } ]
-  };
+	{ name = "Init"; transitions = 
+		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ] 
+	};
+	{ name = "Open"; transitions = 
+		[ { op = "Boolean hasNext()"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] }; 
+			{ op = "void close()"; result = NextState "end" } ] 
+	};
+	{ name = "Read"; transitions = 
+		[ { op = "void read()"; result = NextState "Open" } ] 
+	};
+	{ name = "Close"; transitions = 
+		[ { op = "void close()"; result = NextState "end" } ] 
+	};
 ];;
 
 
