@@ -51,18 +51,18 @@ let next_inner () = "inner:"^string_of_int (next_val i);;
 
 
 let ts = [
-	{ name = "Init"; transitions = 
+	{ name = "Init"; transitions =
 		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ] 
 	};
-	{ name = "Open"; transitions = 
-		[ { op = "Boolean hasNext()"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] }; 
-			{ op = "void close()"; result = NextState "end" } ] 
+	{ name = "Open"; transitions =
+		[ { op = "Boolean hasNext()"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] };
+			{ op = "void close()"; result = NextState "end" } ]
 	};
-	{ name = "Read"; transitions = 
-		[ { op = "void read()"; result = NextState "Open" } ] 
+	{ name = "Read"; transitions =
+		[ { op = "void read()"; result = NextState "Open" } ]
 	};
-	{ name = "Close"; transitions = 
-		[ { op = "void close()"; result = NextState "end" } ] 
+	{ name = "Close"; transitions =
+		[ { op = "void close()"; result = NextState "end" } ]
 	};
 ];;
 
@@ -154,7 +154,7 @@ and compileMethod name m =
                               final = []; mTransitions = [{ init = name; trans = m.op; fin = next }]; lTransitions = [] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
-                          (add_avs next; let trans = { op = m.op; result = NextState next } and 
+                          (add_avs next; let trans = { op = m.op; result = NextState next } and
                              nextState = { name = next; transitions = inner } in
                                 union (compileStateDef nextState) (compileMethod name trans) )
   | Option opt -> compileOptions name m.op opt
@@ -195,7 +195,7 @@ and compileLabel name opt =
 availableStates ts;;
 let doa = compileTypestate ts;;
 
-(* DOA -> Typestate *)
+(* DOA -> Typestate
 
 let rec reduce fn x list =
   match list with
@@ -222,4 +222,4 @@ let typestate = match doa with
 	| Nil -> ""
 	| DOA(doa) -> doaToString doa "NAME";;
 
-print_string typestate;;
+print_string typestate;; *)
