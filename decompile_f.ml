@@ -15,9 +15,8 @@ and t_elem = {
 };;
 
 let find_start l =
-	match l with
-	| [] -> ""
-	| x::xs -> x
+  try List.find(fun x -> x <> "end") l
+  with Not_found -> ""
 ;;
 
 let remove_elem s d =
@@ -30,11 +29,12 @@ let remove_elem s d =
 
 
 let rec decompile name d =
-  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ^ "\n}\n")
+  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ^ "}\n")
 
 and decompile_doa d =
   match d.states with
-  | [] -> ""
+  | []
+	| ["end"] -> ""
   | _ -> let s = d.start in
     let a = List.filter(fun x -> x.init = s) d.method_trans in
     "\t" ^ s ^ " = {\n\t\t" ^ decompile_state s d a ^ "\n\t}\n" ^ decompile_doa (remove_elem s d)
@@ -61,7 +61,7 @@ and decompile_choice c b =
     | _ -> if x.init = c then x.trans ^ ": " ^ x.fin ^ ", " ^ decompile_choice c xs else ""
 ;;
 
-let ex = {states = ["Init"; "Read"; "Open"; "Close"; "end"];
+let ex = {states = ["Init"; "Open"; "Read"; "Close"; "end"];
   choices = ["choice:1"; "choice:2"];
   methods =
    ["Status open()"; "Boolean hasNext()"; "void read()"; "void close()"];
