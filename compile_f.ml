@@ -5,8 +5,8 @@ type doa = {
   labels: string list;
   start: string;
   final: string list;
-  mTransitions: t_elem list;
-  lTransitions: t_elem list
+  method_trans: t_elem list;
+  label_trans: t_elem list
 }
 and t_elem = {
   init: string;
@@ -17,8 +17,8 @@ and t_elem = {
 type automaton = Nil | DOA of doa;;
 
 
-type typestate = eState list
-and eState = {
+type typestate = e_state list
+and e_state = {
   name: string;
   transitions: transition list
 }
@@ -29,12 +29,12 @@ and transition = {
 and w =
   | NextState of string
   | Option of option list
-  | InnerState of iState
+  | InnerState of inner_state
 and option = {
   label: string;
   state: w;
 }
-and iState = transition list
+and inner_state = transition list
 ;;
 
 
@@ -52,7 +52,7 @@ let next_inner () = "inner:"^string_of_int (next_val i);;
 
 let ts = [
 	{ name = "Init"; transitions =
-		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ] 
+		[ { op = "Status open()"; result = Option [{ label = "OK"; state = NextState "Open" }; { label = "ERROR"; state = NextState "end" }] } ]
 	};
 	{ name = "Open"; transitions =
 		[ { op = "Boolean hasNext()"; result = Option [{ label = "TRUE"; state = NextState "Read" }; { label = "FALSE"; state = NextState "Close" }] };
@@ -75,38 +75,38 @@ let rec belongs x l =
     else belongs x tl
 ;;
 
-let rec listUnion l1 l2 =
+let rec list_union l1 l2 =
   match l1 with
   | [] -> l2
   | x::xs ->
-    if belongs x l2 then listUnion xs l2
-    else x::listUnion xs l2
+    if belongs x l2 then list_union xs l2
+    else x::list_union xs l2
 ;;
 
 
-let rec availableStates ts =
+let rec available_states ts =
   match ts with
   | [] -> ["end"]
   | s::next ->
-    let v = (availableStates next) in
+    let v = (available_states next) in
       if s.name = "end" then failwith "State with name 'end' not allowed."
       else if belongs s.name v then let err = "Found duplicate state: "^s.name in failwith err
       else s.name::v
 ;;
-let avs = ref (availableStates ts);;
+let avs = ref (available_states ts);;
 
 let add_avs s =
   avs := s::!avs
 ;;
 
 
-let rec duplicateTrans t =
+let rec duplicate_trans t =
   match t with
   | [] -> []
   | x::xs ->
     let sl = (findPairs xs) in
       if belongs (x.init, x.trans) sl then let err = "Found duplicate method or label: "^x.trans in failwith err
-      else x::(duplicateTrans xs)
+      else x::(duplicate_trans xs)
 and findPairs l =
   match l with
   | [] -> []
@@ -118,108 +118,79 @@ let union b a =
   match b, a with
   | Nil, Nil -> Nil
   | Nil, DOA d
-  | DOA d, Nil -> DOA { states = listUnion d.states ["end"]; choices = d.choices; methods = d.methods; labels = d.labels; start = d.start;
-                        final = listUnion d.final ["end"]; mTransitions = d.mTransitions; lTransitions = d.lTransitions }
-  | DOA b, DOA a -> DOA { states = listUnion a.states b.states; choices = listUnion a.choices b.choices; methods = listUnion a.methods b.methods;
-                          labels = listUnion a.labels b.labels; start = a.start; final = listUnion a.final b.final;
-                          mTransitions = duplicateTrans (a.mTransitions @ b.mTransitions); lTransitions = duplicateTrans (a.lTransitions @ b.lTransitions) }
+  | DOA d, Nil -> DOA { states = list_union d.states ["end"]; choices = d.choices; methods = d.methods; labels = d.labels; start = d.start;
+                        final = list_union d.final ["end"]; method_trans = d.method_trans; label_trans = d.label_trans }
+  | DOA b, DOA a -> DOA { states = list_union a.states b.states; choices = list_union a.choices b.choices; methods = list_union a.methods b.methods;
+                          labels = list_union a.labels b.labels; start = a.start; final = list_union a.final b.final;
+                          method_trans = duplicate_trans (a.method_trans @ b.method_trans); label_trans = duplicate_trans (a.label_trans @ b.label_trans) }
 ;;
 
 
-let rec compileTypestate t =
+let rec compile_typestate t =
   match t with
   | [] -> Nil
-  | a::body -> union (compileTypestate body) (compileStateDef a)
+  | a::body -> union (compile_typestate body) (compile_state_def a)
 
 
-and compileStateDef s =
+and compile_state_def s =
   match s.transitions with
-  | [] -> DOA { states = [s.name]; choices = []; methods = []; labels = []; start = s.name; final = [s.name]; mTransitions = []; lTransitions = [] }
-  | x::xs -> compileState s.name x xs
+  | [] -> DOA { states = [s.name]; choices = []; methods = []; labels = []; start = s.name; final = [s.name]; method_trans = []; label_trans = [] }
+  | x::xs -> compile_state s.name x xs
 
 
-and compileState name first next =
+and compile_state name first next =
   match next with
-  | [] -> compileMethod name first
-  | x::xs -> union (compileState name x xs) (compileMethod name first)
+  | [] -> compile_method name first
+  | x::xs -> union (compile_state name x xs) (compile_method name first)
 
 
-and compileMethod name m =
+and compile_method name m =
   match m.result with
   | NextState "{}"
   | NextState "end" -> DOA { states = [name; "end"]; choices = []; methods = [m.op]; labels = []; start = name;
-                             final = ["end"]; mTransitions = [{ init = name; trans = m.op; fin = "end" }]; lTransitions = [] }
+                             final = ["end"]; method_trans = [{ init = name; trans = m.op; fin = "end" }]; label_trans = [] }
   | NextState next -> if (belongs next !avs) then
                         DOA { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name;
-                              final = []; mTransitions = [{ init = name; trans = m.op; fin = next }]; lTransitions = [] }
+                              final = []; method_trans = [{ init = name; trans = m.op; fin = next }]; label_trans = [] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
                           (add_avs next; let trans = { op = m.op; result = NextState next } and
                              nextState = { name = next; transitions = inner } in
-                                union (compileStateDef nextState) (compileMethod name trans) )
-  | Option opt -> compileOptions name m.op opt
+                                union (compile_state_def nextState) (compile_method name trans) )
+  | Option opt -> compile_options name m.op opt
 
 
-and compileOptions name met options =
+and compile_options name met options =
   match options with
   | [] -> invalid_arg "There must be at least an option"
   | o::tl -> let choice = next_choice() in
               let a = DOA { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
-                            final = []; mTransitions = [{ init = name; trans = met; fin = choice }]; lTransitions = [] } in
-                union (compileLabelOptions choice o tl) a
+                            final = []; method_trans = [{ init = name; trans = met; fin = choice }]; label_trans = [] } in
+                union (compile_label_options choice o tl) a
 
 
-and compileLabelOptions name first next =
+and compile_label_options name first next =
   match next with
-  | [] -> compileLabel name first
-  | nxt::tl -> union (compileLabelOptions name nxt tl) (compileLabel name first)
+  | [] -> compile_label name first
+  | nxt::tl -> union (compile_label_options name nxt tl) (compile_label name first)
 
 
-and compileLabel name opt =
+and compile_label name opt =
   let l = opt.label and s = opt.state in
   match s with
   | NextState "{}"
   | NextState "end" -> DOA { states = ["end"]; choices = [name]; methods = []; labels = [l]; start = "";
-                             final = ["end"]; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = "end" }] }
+                             final = ["end"]; method_trans = []; label_trans = [{ init = name; trans = l; fin = "end" }] }
   | NextState next -> if (belongs next !avs) then
                         DOA { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
-                              final = []; mTransitions = []; lTransitions = [{ init = name; trans = l; fin = next }] }
+                              final = []; method_trans = []; label_trans = [{ init = name; trans = l; fin = next }] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
                           (add_avs next; let nextState = { name = next; transitions = inner } and
                             option = { label = l; state = NextState next } in
-                              union (compileStateDef nextState) (compileLabel name option) )
+                              union (compile_state_def nextState) (compile_label name option) )
   | Option _ -> failwith "Internal choice states must always transition to external choice states."
 ;;
 
-availableStates ts;;
-let doa = compileTypestate ts;;
-
-(* DOA -> Typestate
-
-let rec reduce fn x list =
-  match list with
-  | [] -> x
-  | v::rest -> fn v (reduce fn x rest);;
-
-let u name = if name = "end" then name else if String.contains name ':' then String.map (fun c -> if c = ':' then '_' else c) name else "n_"^name;;
-
-let choiceToString doa choice = "<" ^ (reduce (fun { init; trans; fin } str -> (
-                                	if (u init) = (u choice) then trans ^ ": " ^ (u fin) ^ (if str = "" then "" else "," ^ str) else str
-                                )) "" doa.lTransitions) ^ ">";;
-
-let transToString doa _to = if belongs _to doa.choices then choiceToString doa _to else u _to;;
-
-let stateToString doa state = "{\n" ^ (reduce (fun { init; trans; fin } str -> (
-                                	if (u init) = (u state) then trans ^ ": " ^ (transToString doa fin) ^ (if str = "" then "\n" else ",\n" ^ str) else str
-                                )) "" doa.mTransitions) ^ "}";;
-
-let doaToString doa name = "typestate " ^ name ^ " {\n" ^ (reduce (fun state str -> (
-                           		if state = "end" then str else (u state) ^ "=" ^ (stateToString doa state) ^ "\n" ^ str
-                           	)) "" doa.states) ^ "}\n";;
-
-let typestate = match doa with
-	| Nil -> ""
-	| DOA(doa) -> doaToString doa "NAME";;
-
-print_string typestate;; *)
+available_states ts;;
+compile_typestate ts;;
