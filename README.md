@@ -8,4 +8,4 @@
 **decompile_f** contains the OCaml implementation the *Decompile* function, translating DOA into Mungo typestates
 
 ### Known bugs
-The implementation of decompile currently defines the "end" state
+The implementation of *Decompile* currently defines the "end" state
