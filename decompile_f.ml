@@ -30,7 +30,7 @@ let remove_elem s d =
 
 
 let rec decompile name d =
-  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ^ "\n}")
+  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ^ "\n}\n")
 
 and decompile_doa d =
   match d.states with
@@ -78,4 +78,4 @@ let ex = {states = ["Init"; "Read"; "Open"; "Close"; "end"];
     {init = "choice:2"; trans = "TRUE"; fin = "Read"};
     {init = "choice:2"; trans = "FALSE"; fin = "Close"}]};;
 
-decompile "FileProtocol" ex
+decompile "FileProtocol" ex;;
