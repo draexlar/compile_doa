@@ -29,36 +29,36 @@ let remove_elem s d =
 
 
 let rec decompile name d =
-  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ^ "}\n")
+  print_string ("typestate " ^ name ^ " {\n" ^ decompile_doa d ["end"]^ "}\n")
 
-and decompile_doa d =
+and decompile_doa d g =
   match d.states with
   | []
 	| ["end"] -> ""
   | _ -> let s = d.start in
-    let a = List.filter(fun x -> x.init = s) d.method_trans in
-    "\t" ^ s ^ " = {\n\t\t" ^ decompile_state s d a ^ "\n\t}\n" ^ decompile_doa (remove_elem s d)
+    let a = List.filter(fun x -> x.init = s) d.method_trans and new_g = s::g in
+    "\t" ^ s ^ " = {\n\t\t" ^ decompile_state s d a g ^ "\n\t}\n" ^ decompile_doa (remove_elem s d) new_g
 
-and decompile_state c d a =
+and decompile_state c d a g =
   match a with
   | [] -> ""
   | x::xs ->
     match xs with
-    | [] -> if x.init = c then x.trans ^ ": " ^ decompile_next x.fin d else ""
-    | _ -> if x.init = c then x.trans ^ ": " ^ decompile_next x.fin d ^ ",\n\t\t" ^ decompile_state c d xs else ""
+    | [] -> if x.init = c then x.trans ^ ": " ^ decompile_next x.fin d g else ""
+    | _ -> if x.init = c then x.trans ^ ": " ^ decompile_next x.fin d g ^ ",\n\t\t" ^ decompile_state c d xs g else ""
 
-and decompile_next n d =
-  if List.exists(fun x -> x = n) d.states then n
-  else if List.exists(fun x -> x = n) d.choices then "<" ^ decompile_choice n (List.filter(fun x -> x.init = n) d.label_trans) ^ ">"
+and decompile_next n d g =
+  if List.exists(fun x -> x = n) d.states || List.exists(fun x -> x = n) g then n
+  else if List.exists(fun x -> x = n) d.choices then "<" ^ decompile_choice n d (List.filter(fun x -> x.init = n) d.label_trans) g ^ ">"
   else let err = "Undefined state: " ^ n in failwith err
 
-and decompile_choice c b =
+and decompile_choice c d b g =
   match b with
   | [] ->  invalid_arg "DOA not well defined. Internal choice states must have at least an option"
   | x::xs ->
     match xs with
-    | [] -> if x.init = c then x.trans ^ ": " ^ x.fin else ""
-    | _ -> if x.init = c then x.trans ^ ": " ^ x.fin ^ ", " ^ decompile_choice c xs else ""
+    | [] -> if x.init = c && (List.exists(fun y -> y = x.fin) (d.states @ g)) then x.trans ^ ": " ^ x.fin else failwith "Undefined state."
+    | _ -> if x.init = c && (List.exists(fun y -> y = x.fin) (d.states @ g)) then x.trans ^ ": " ^ x.fin ^ ", " ^ decompile_choice c d xs g else failwith "Undefined state."
 ;;
 
 let ex = {states = ["Init"; "Open"; "Read"; "Close"; "end"];
