@@ -104,13 +104,13 @@ let rec duplicate_trans t =
   match t with
   | [] -> []
   | x::xs ->
-    let sl = (findPairs xs) in
+    let sl = (find_pairs xs) in
       if belongs (x.init, x.trans) sl then let err = "Found duplicate method or label: "^x.trans in failwith err
       else x::(duplicate_trans xs)
-and findPairs l =
+and find_pairs l =
   match l with
   | [] -> []
-  | y::ys -> (y.init, y.trans)::(findPairs ys)
+  | y::ys -> (y.init, y.trans)::(find_pairs ys)
 ;;
 
 
@@ -155,8 +155,8 @@ and compile_method name m =
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
                           (add_avs next; let trans = { op = m.op; result = NextState next } and
-                             nextState = { name = next; transitions = inner } in
-                                union (compile_state_def nextState) (compile_method name trans) )
+                             next_state = { name = next; transitions = inner } in
+                                union (compile_state_def next_state) (compile_method name trans) )
   | Option opt -> compile_options name m.op opt
 
 
@@ -186,9 +186,9 @@ and compile_label name opt =
                               final = []; method_trans = []; label_trans = [{ init = name; trans = l; fin = next }] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
-                          (add_avs next; let nextState = { name = next; transitions = inner } and
+                          (add_avs next; let next_state = { name = next; transitions = inner } and
                             option = { label = l; state = NextState next } in
-                              union (compile_state_def nextState) (compile_label name option) )
+                              union (compile_state_def next_state) (compile_label name option) )
   | Option _ -> failwith "Internal choice states must always transition to external choice states."
 ;;
 
