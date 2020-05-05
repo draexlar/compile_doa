@@ -14,9 +14,6 @@ and t_elem = {
   fin: string;
 };;
 
-type automaton = Nil | DOA of doa;;
-
-
 type typestate = e_state list
 and e_state = {
   name: string;
@@ -115,26 +112,20 @@ and find_pairs l =
 
 
 let union b a =
-  match b, a with
-  | Nil, Nil -> Nil
-  | Nil, DOA d
-  | DOA d, Nil -> DOA { states = list_union d.states ["end"]; choices = d.choices; methods = d.methods; labels = d.labels; start = d.start;
-                        final = list_union d.final ["end"]; method_trans = d.method_trans; label_trans = d.label_trans }
-  | DOA b, DOA a -> DOA { states = list_union a.states b.states; choices = list_union a.choices b.choices; methods = list_union a.methods b.methods;
-                          labels = list_union a.labels b.labels; start = a.start; final = list_union a.final b.final;
-                          method_trans = duplicate_trans (a.method_trans @ b.method_trans); label_trans = duplicate_trans (a.label_trans @ b.label_trans) }
+  { states = list_union a.states b.states; choices = list_union a.choices b.choices; methods = list_union a.methods b.methods; labels = list_union a.labels b.labels; start = a.start; final = list_union a.final b.final; method_trans = duplicate_trans (a.method_trans @ b.method_trans); label_trans = duplicate_trans (a.label_trans @ b.label_trans) }
 ;;
 
 
 let rec compile_typestate t =
   match t with
-  | [] -> Nil
+  | [] -> { states = ["end"];  choices = [];  methods = [];  labels = []; 
+      start = "end"; final = ["end"];  method_trans = [];  label_trans = [] }
   | a::body -> union (compile_typestate body) (compile_state_def a)
 
 
 and compile_state_def s =
   match s.transitions with
-  | [] -> DOA { states = [s.name]; choices = []; methods = []; labels = []; start = s.name; final = [s.name]; method_trans = []; label_trans = [] }
+  | [] -> { states = [s.name]; choices = []; methods = []; labels = []; start = s.name; final = [s.name]; method_trans = []; label_trans = [] }
   | x::xs -> compile_state s.name x xs
 
 
@@ -147,11 +138,10 @@ and compile_state name first next =
 and compile_method name m =
   match m.result with
   | NextState "{}"
-  | NextState "end" -> DOA { states = [name; "end"]; choices = []; methods = [m.op]; labels = []; start = name;
+  | NextState "end" -> { states = [name; "end"]; choices = []; methods = [m.op]; labels = []; start = name;
                              final = ["end"]; method_trans = [{ init = name; trans = m.op; fin = "end" }]; label_trans = [] }
   | NextState next -> if (belongs next !avs) then
-                        DOA { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name;
-                              final = []; method_trans = [{ init = name; trans = m.op; fin = next }]; label_trans = [] }
+                        { states = if name = next then [name] else [name;next]; choices = []; methods = [m.op]; labels = []; start = name; final = []; method_trans = [{ init = name; trans = m.op; fin = next }]; label_trans = [] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
                           (add_avs next; let trans = { op = m.op; result = NextState next } and
@@ -164,7 +154,7 @@ and compile_options name met options =
   match options with
   | [] -> invalid_arg "There must be at least an option"
   | o::tl -> let choice = next_choice() in
-              let a = DOA { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
+              let a = { states = [name]; choices = [choice]; methods = [met]; labels = []; start = name;
                             final = []; method_trans = [{ init = name; trans = met; fin = choice }]; label_trans = [] } in
                 union (compile_label_options choice o tl) a
 
@@ -179,10 +169,10 @@ and compile_label name opt =
   let l = opt.label and s = opt.state in
   match s with
   | NextState "{}"
-  | NextState "end" -> DOA { states = ["end"]; choices = [name]; methods = []; labels = [l]; start = "";
+  | NextState "end" -> { states = ["end"]; choices = [name]; methods = []; labels = [l]; start = "";
                              final = ["end"]; method_trans = []; label_trans = [{ init = name; trans = l; fin = "end" }] }
   | NextState next -> if (belongs next !avs) then
-                        DOA { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
+                        { states = [next]; choices = [name]; methods = []; labels = [l]; start = "";
                               final = []; method_trans = []; label_trans = [{ init = name; trans = l; fin = next }] }
                       else let err = "Undefined state: "^next in failwith err
   | InnerState inner -> let next = next_inner() in
